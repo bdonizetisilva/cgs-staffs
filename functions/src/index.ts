@@ -15,11 +15,11 @@ main.use("/api/v1", app);
 main.use(bodyParser.json());
 main.use(bodyParser.urlencoded({extended: false}));
 
-interface BatchItem {
-  phone: string,
-  headerParameters?: string[],
-  bodyParameters?: string[],
-}
+// interface BatchItem {
+//   phone: string,
+//   headerParameters?: string[],
+//   bodyParameters?: string[],
+// }
 
 app.get("/messages", async (req, res) => {
   const messages = await messageRepo.getAllMessages();
@@ -54,7 +54,7 @@ app.post("/messages/template/:template/phone/:phone", async (req, res) => {
   const {template, phone} = req.params;
   const {headerParameters, bodyParameters} = req.body;
 
-  whatsappClientApi
+  await whatsappClientApi
       .sendTemplatedMessage(phone, template, headerParameters, bodyParameters)
       .then((data) => res.status(200).json(data))
       .catch((error) => res.status(500).send(error));
@@ -64,16 +64,31 @@ app.post("/messages/template/:template/batch", async (req, res) => {
   const {template} = req.params;
   const {messageList} = req.body;
 
-  const promisses = messageList.map((message: BatchItem) => {
-    whatsappClientApi.sendTemplatedMessage(
-        message.phone,
-        template,
-        message.headerParameters,
-        message.bodyParameters
-    );
-  });
+  const sentNumbers: string[] = [];
+  for (const message of messageList) {
+    try {
+      await whatsappClientApi.sendTemplatedMessage(
+          message.phone,
+          template,
+          message.headerParameters,
+          message.bodyParameters
+      );
 
-  Promise.all(promisses)
+      sentNumbers.push(message.phone);
+    } catch (exception) {
+      console.log(exception);
+    }
+  }
+
+  res.status(200).json(sentNumbers);
+});
+
+app.post("/messages/reply/:phone", async (req, res) => {
+  const {phone} = req.params;
+  const {text} = req.body;
+
+  await whatsappClientApi
+      .sendTextMessage(phone, text)
       .then((data) => res.status(200).json(data))
       .catch((error) => res.status(500).send(error));
 });

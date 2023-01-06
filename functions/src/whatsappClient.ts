@@ -6,7 +6,8 @@ interface WhatsappRepository {
     template: string,
     headerParameters?: string[],
     bodyParameters?: string[]
-  ) => Promise<any>
+  ) => Promise<any>,
+  sendTextMessage: (to: string, text: string) => Promise<any>,
 }
 
 const createWhatsappRepository = (): WhatsappRepository => {
@@ -54,6 +55,22 @@ const createWhatsappRepository = (): WhatsappRepository => {
     );
   };
 
+  const sendTextMessage = (to: string, text: string): Promise<any> =>
+    whatsappFetcher(
+        "post",
+        "/messages",
+        {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to,
+          type: "text",
+          text: {
+            preview_url: false,
+            body: text,
+          },
+        },
+    );
+
   const buildComponent = (type: string, parameters: string[]) => ({
     type,
     parameters: parameters
@@ -62,6 +79,7 @@ const createWhatsappRepository = (): WhatsappRepository => {
 
   return {
     sendTemplatedMessage,
+    sendTextMessage,
   };
 };
 
